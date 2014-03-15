@@ -8,6 +8,8 @@
 
 #undef gen
 
+#undef perm
+
 #undef rep1
 
 #undef rep0

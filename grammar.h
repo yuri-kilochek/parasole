@@ -140,6 +140,7 @@ enum parasole_grammar_rule_type {
     parasole_grammar_rule_type_optional,
     parasole_grammar_rule_type_repeated0,
     parasole_grammar_rule_type_repeated1,
+    parasole_grammar_rule_type_permutation,
     parasole_grammar_rule_type_generating,
     parasole_grammar_rule_type_combining,
 };
@@ -176,6 +177,12 @@ struct parasole_grammar_rule_repeated1 {
     union parasole_grammar_rule const *subject;
 };
 
+struct parasole_grammar_rule_permutation {
+    enum parasole_grammar_rule_type type;
+    int subject_count;
+    union parasole_grammar_rule const **subjects;
+};
+
 struct parasole_grammar_rule_generating {
     enum parasole_grammar_rule_type type;
     union parasole_grammar_rule const *subject;
@@ -196,6 +203,7 @@ union parasole_grammar_rule {
     struct parasole_grammar_rule_optional optional;
     struct parasole_grammar_rule_repeated0 repeated0;
     struct parasole_grammar_rule_repeated1 repeated1;
+    struct parasole_grammar_rule_permutation permutation;
     struct parasole_grammar_rule_generating generating;
     struct parasole_grammar_rule_combining combining;
 };
@@ -264,6 +272,18 @@ union parasole_grammar_rule {
             .subject = PARASOLE_IMPL_ADDROF(SUBJECT)  \
         }                                             \
     }                                                 \
+)
+
+#define parasole_grammar_rule_permutation(FIRST, ...) (              \
+    (union parasole_grammar_rule const) {                            \
+        .type = parasole_grammar_rule_type_permutation,              \
+        .permutation = {                                             \
+            .subject_count = PARASOLE_IMPL_ARGC(FIRST, __VA_ARGS__), \
+            .subjects = (union parasole_grammar_rule const*[]) {     \
+                PARASOLE_IMPL_ADDROF_EACH(FIRST, __VA_ARGS__)        \
+            }                                                        \
+        }                                                            \
+    }                                                                \
 )
 
 #define parasole_grammar_generating(SUBJECT, GENERATOR) ( \

@@ -22,6 +22,8 @@
 
 #define rep1(SUBJECT) parasole_grammar_rule_repeated1(SUBJECT)
 
+#define perm(FIRST, ...) parasole_grammar_rule_permutation(FIRST, __VA_ARGS__)
+
 #define gen(SUBJECT, GENERATOR) parasole_grammar_generating(SUBJECT, GENERATOR)
 
 #define comb(SUBJECT, COMBINER) parasole_grammar_combining(SUBJECT, COMBINER)
