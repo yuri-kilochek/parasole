@@ -9,7 +9,7 @@
 union parasole_parser typedef parasole_parser_t;
 
 enum parasole_parser_type {
-    parasole_parser_type_end_of_input,
+    parasole_parser_type_identity,
     parasole_parser_type_character,
     parasole_parser_type_optional,
     parasole_parser_type_repeater0,
@@ -18,11 +18,13 @@ enum parasole_parser_type {
     parasole_parser_type_alternative,
     parasole_parser_type_spawner,
     parasole_parser_type_combiner,
+    parasole_parser_type_end_of_input,
 } typedef parasole_parser_type_t;
 
-struct parasole_parser_end_of_input {
+struct parasole_parser_identity {
     parasole_parser_type_t type;
-} typedef parasole_parser_end_of_input_t;
+    parasole_parser_t const *subject;
+} typedef parasole_parser_identity_t;
 
 struct parasole_parser_character {
     parasole_parser_type_t type;
@@ -68,9 +70,13 @@ struct parasole_parser_combiner {
     void *(*combine)(void **nodes, size_t node_count, void *context);
 } typedef parasole_parser_combiner_t;
 
+struct parasole_parser_end_of_input {
+    parasole_parser_type_t type;
+} typedef parasole_parser_end_of_input_t;
+
 union parasole_parser {
     parasole_parser_type_t type;
-    parasole_parser_end_of_input_t end_of_input;
+    parasole_parser_identity_t identity;
     parasole_parser_character_t character;
     parasole_parser_optional_t optional;
     parasole_parser_repeater0_t repeater0;
@@ -79,11 +85,15 @@ union parasole_parser {
     parasole_parser_alternative_t alternative;
     parasole_parser_spawner_t spawner;
     parasole_parser_combiner_t combiner;
+    parasole_parser_end_of_input_t end_of_input;
 };
 
-#define PARASOLE_PARSER_END_OF_INPUT ( \
+#define PARASOLE_PARSER_IDENTITY(SUBJECT) ( \
     (parasole_parser_t const) { \
-        .type = parasole_parser_type_end_of_input \
+        .type = parasole_parser_type_identity, \
+        .identity = { \
+            .subject = &(SUBJECT) \
+        } \
     } \
 )
 
@@ -164,6 +174,12 @@ union parasole_parser {
             .subject = &(SUBJECT), \
             .combine = &(COMBINE) \
         } \
+    } \
+)
+
+#define PARASOLE_PARSER_END_OF_INPUT ( \
+    (parasole_parser_t const) { \
+        .type = parasole_parser_type_end_of_input \
     } \
 )
 

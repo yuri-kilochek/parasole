@@ -4,7 +4,7 @@
 
 #undef PARASOLE_RULES_BLOCK
 
-#undef eoi
+#undef ident
 
 #undef ch
 
@@ -21,6 +21,8 @@
 #undef spwn
 
 #undef comb
+
+#undef eoi
 
 #undef rule
 
