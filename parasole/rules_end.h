@@ -18,6 +18,10 @@
 
 #undef alt
 
+#undef spwn
+
+#undef comb
+
 #undef rule
 
 #undef rules

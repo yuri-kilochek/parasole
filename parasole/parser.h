@@ -6,22 +6,18 @@
 #include "argc.h"
 #include "each.h"
 
-#define PARASOLE_ADDROF(X) \
-    &X
-
-#define PARASOLE_ADDROF_EACH(...) \
-    PARASOLE_EACH(PARASOLE_ADDROF, __VA_ARGS__)
-
 union parasole_parser typedef parasole_parser_t;
 
 enum parasole_parser_type {
     parasole_parser_type_end_of_input,
     parasole_parser_type_character,
     parasole_parser_type_optional,
-    parasole_parser_type_repeated0,
-    parasole_parser_type_repeated1,
+    parasole_parser_type_repeater0,
+    parasole_parser_type_repeater1,
     parasole_parser_type_sequence,
     parasole_parser_type_alternative,
+    parasole_parser_type_spawner,
+    parasole_parser_type_combiner,
 } typedef parasole_parser_type_t;
 
 struct parasole_parser_end_of_input {
@@ -30,7 +26,7 @@ struct parasole_parser_end_of_input {
 
 struct parasole_parser_character {
     parasole_parser_type_t type;
-    int code_point;
+    char character;
 } typedef parasole_parser_character_t;
 
 struct parasole_parser_optional {
@@ -38,15 +34,15 @@ struct parasole_parser_optional {
     parasole_parser_t const *subject;
 } typedef parasole_parser_optional_t;
 
-struct parasole_parser_repeated0 {
+struct parasole_parser_repeater0 {
     parasole_parser_type_t type;
     parasole_parser_t const *subject;
-} typedef parasole_parser_repeated0_t;
+} typedef parasole_parser_repeater0_t;
 
-struct parasole_parser_repeated1 {
+struct parasole_parser_repeater1 {
     parasole_parser_type_t type;
     parasole_parser_t const *subject;
-} typedef parasole_parser_repeated1_t;
+} typedef parasole_parser_repeater1_t;
 
 struct parasole_parser_sequence {
     parasole_parser_type_t type;
@@ -60,79 +56,113 @@ struct parasole_parser_alternative {
     parasole_parser_t const *const *subjects;
 } typedef parasole_parser_alternative_t;
 
+struct parasole_parser_spawner {
+    parasole_parser_type_t type;
+    parasole_parser_t const *subject;
+    void *(*spawn)(char const *characters, size_t character_count, void *context);
+} typedef parasole_parser_spawner_t;
+
+struct parasole_parser_combiner {
+    parasole_parser_type_t type;
+    parasole_parser_t const *subject;
+    void *(*combine)(void **nodes, size_t node_count, void *context);
+} typedef parasole_parser_combiner_t;
+
 union parasole_parser {
     parasole_parser_type_t type;
     parasole_parser_end_of_input_t end_of_input;
     parasole_parser_character_t character;
     parasole_parser_optional_t optional;
-    parasole_parser_repeated0_t repeated0;
-    parasole_parser_repeated1_t repeated1;
+    parasole_parser_repeater0_t repeater0;
+    parasole_parser_repeater1_t repeater1;
     parasole_parser_sequence_t sequence;
     parasole_parser_alternative_t alternative;
+    parasole_parser_spawner_t spawner;
+    parasole_parser_combiner_t combiner;
 };
 
 #define PARASOLE_PARSER_END_OF_INPUT ( \
-    (union parasole_parser const) { \
+    (parasole_parser_t const) { \
         .type = parasole_parser_type_end_of_input \
     } \
 )
 
-#define PARASOLE_PARSER_CHARACTER(CODE_POINT) ( \
-    (union parasole_parser const) { \
+#define PARASOLE_PARSER_CHARACTER(CHARACTER) ( \
+    (parasole_parser_t const) { \
         .type = parasole_parser_type_character, \
         .character = { \
-            .code_point = CODE_POINT \
+            .character = (CHARACTER) \
         } \
     } \
 )
 
 #define PARASOLE_PARSER_OPTIONAL(SUBJECT) ( \
-    (union parasole_parser const) { \
+    (parasole_parser_t const) { \
         .type = parasole_parser_type_optional, \
         .optional = { \
-            .subject = PARASOLE_ADDROF(SUBJECT) \
+            .subject = &(SUBJECT) \
         } \
     } \
 )
 
-#define PARASOLE_PARSER_REPEATED0(SUBJECT) ( \
-    (union parasole_parser const) { \
-        .type = parasole_parser_type_repeated0, \
-        .repeated0 = { \
-            .subject = PARASOLE_ADDROF(SUBJECT) \
+#define PARASOLE_PARSER_REPEATER0(SUBJECT) ( \
+    (parasole_parser_t const) { \
+        .type = parasole_parser_type_repeater0, \
+        .repeater0 = { \
+            .subject = &(SUBJECT) \
         } \
     } \
 )
 
-#define PARASOLE_PARSER_REPEATED1(SUBJECT) ( \
-    (union parasole_parser const) { \
-        .type = parasole_parser_type_repeated1, \
-        .repeated1 = { \
-            .subject = PARASOLE_ADDROF(SUBJECT) \
+#define PARASOLE_PARSER_REPEATER1(SUBJECT) ( \
+    (parasole_parser_t const) { \
+        .type = parasole_parser_type_repeater1, \
+        .repeater1 = { \
+            .subject = &(SUBJECT) \
         } \
     } \
 )
 
 #define PARASOLE_PARSER_SEQUENCE(FIRST, ...) ( \
-    (union parasole_parser const) { \
+    (parasole_parser_t const) { \
         .type = parasole_parser_type_sequence, \
         .sequence = { \
             .subject_count = PARASOLE_ARGC(FIRST, __VA_ARGS__), \
-            .subjects = (union parasole_parser const *const[]) { \
-                PARASOLE_ADDROF_EACH(FIRST, __VA_ARGS__) \
+            .subjects = (parasole_parser_t const *const[]) { \
+                PARASOLE_EACH(&, FIRST, __VA_ARGS__) \
             } \
         } \
     } \
 )
 
 #define PARASOLE_PARSER_ALTERNATIVE(FIRST, ...) ( \
-    (union parasole_parser const) { \
+    (parasole_parser_t const) { \
         .type = parasole_parser_type_alternative, \
         .alternative = { \
             .subject_count = PARASOLE_ARGC(FIRST, __VA_ARGS__), \
-            .subjects = (union parasole_parser const *const[]) { \
-                PARASOLE_ADDROF_EACH(FIRST, __VA_ARGS__) \
+            .subjects = (parasole_parser_t const *const[]) { \
+                PARASOLE_EACH(&, FIRST, __VA_ARGS__) \
             } \
+        } \
+    } \
+)
+
+#define PARASOLE_PARSER_SPAWNER(SUBJECT, SPAWN) ( \
+    (parasole_parser_t const) { \
+        .type = parasole_parser_type_spawner, \
+        .spawner = { \
+            .subject = &(SUBJECT), \
+            .spawn = &(SPAWN) \
+        } \
+    } \
+)
+
+#define PARASOLE_PARSER_COMBINER(SUBJECT, COMBINE) ( \
+    (parasole_parser_t const) { \
+        .type = parasole_parser_type_combiner, \
+        .combiner = { \
+            .subject = &(SUBJECT), \
+            .combine = &(COMBINE) \
         } \
     } \
 )
